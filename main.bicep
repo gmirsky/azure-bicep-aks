@@ -121,6 +121,7 @@ param aksName string = '${namePrefix}-aks'
 @description('Name of the jumpbox VM.')
 param jumpboxVmName string = '${namePrefix}-jump'
 
+// Standardized resource names used across the deployment.
 var vnetName = '${namePrefix}-vnet'
 var bastionPublicIpName = '${namePrefix}-bas-pip'
 var bastionName = '${namePrefix}-bas'
@@ -132,6 +133,7 @@ var acrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/ro
 var keyVaultSecretsUserRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
 var monitoringReaderRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05')
 
+// Core network fabric with dedicated subnets for AKS, Bastion, and jumpbox.
 resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' = {
   name: vnetName
   location: location
@@ -193,6 +195,7 @@ resource jumpboxNsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
   }
 }
 
+// Public ingress endpoint required by Bastion in this deployment mode.
 resource bastionPublicIp 'Microsoft.Network/publicIPAddresses@2022-09-01' = {
   name: bastionPublicIpName
   location: location
@@ -205,6 +208,7 @@ resource bastionPublicIp 'Microsoft.Network/publicIPAddresses@2022-09-01' = {
   }
 }
 
+// Bastion provides controlled administrative entry to the private platform.
 resource bastion 'Microsoft.Network/bastionHosts@2023-11-01' = {
   name: bastionName
   location: location
@@ -231,6 +235,7 @@ resource bastion 'Microsoft.Network/bastionHosts@2023-11-01' = {
   }
 }
 
+// Log store for AKS diagnostics and control-plane telemetry.
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: logAnalyticsWorkspaceName
   location: location
@@ -248,6 +253,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   }
 }
 
+// Metrics workspace consumed by managed Prometheus and Grafana.
 resource monitorWorkspace 'Microsoft.Monitor/accounts@2023-04-03' = {
   name: monitorWorkspaceName
   location: location
@@ -255,6 +261,7 @@ resource monitorWorkspace 'Microsoft.Monitor/accounts@2023-04-03' = {
   properties: {}
 }
 
+// Managed Grafana is integrated with Azure Monitor Workspace.
 resource grafana 'Microsoft.Dashboard/grafana@2023-09-01' = {
   name: grafanaName
   location: location
@@ -277,6 +284,7 @@ resource grafana 'Microsoft.Dashboard/grafana@2023-09-01' = {
   }
 }
 
+// Private ACR for image pull with admin access disabled.
 resource acr 'Microsoft.ContainerRegistry/registries@2022-12-01' = {
   name: acrName
   location: location
@@ -307,6 +315,7 @@ resource acr 'Microsoft.ContainerRegistry/registries@2022-12-01' = {
   }
 }
 
+// Key Vault is RBAC-enabled and locked to private networking.
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
   name: keyVaultName
   location: location
@@ -333,6 +342,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
   }
 }
 
+// Private endpoints keep ACR and Key Vault off public network paths.
 resource acrPrivateEndpoint 'Microsoft.Network/privateEndpoints@2022-09-01' = if (enablePrivateEndpoints) {
   name: '${acrName}-pe'
   location: location
@@ -377,6 +387,7 @@ resource keyVaultPrivateEndpoint 'Microsoft.Network/privateEndpoints@2022-09-01'
   }
 }
 
+// Private DNS zones map service FQDNs to private endpoint addresses.
 resource acrPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (enablePrivateEndpoints) {
   name: 'privatelink.azurecr.io'
   location: 'global'
@@ -443,6 +454,7 @@ resource keyVaultPrivateEndpointZoneGroup 'Microsoft.Network/privateEndpoints/pr
   }
 }
 
+// Jumpbox is the operator workstation inside the VNet boundary.
 resource jumpboxNic 'Microsoft.Network/networkInterfaces@2022-09-01' = {
   name: jumpboxNicName
   location: location
@@ -516,6 +528,7 @@ resource jumpboxVm 'Microsoft.Compute/virtualMachines@2022-11-01' = {
   }
 }
 
+// Baseline AKS node pools plus an optional spot pool.
 var baseAgentPools = [
   {
     name: 'sysnp'
@@ -592,6 +605,7 @@ var spotAgentPool = {
 
 var allAgentPools = enableSpotPool ? concat(baseAgentPools, [spotAgentPool]) : baseAgentPools
 
+// Private AKS cluster with security, observability, and identity integrations.
 resource aks 'Microsoft.ContainerService/managedClusters@2023-05-01' = {
   name: aksName
   location: location
@@ -689,6 +703,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-05-01' = {
   }
 }
 
+// RBAC links cluster identities to dependent services.
 resource aksToAcrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(acr.id, aks.id, 'AcrPullRoleAssignment')
   scope: acr
@@ -719,6 +734,7 @@ resource grafanaMonitoringReaderRole 'Microsoft.Authorization/roleAssignments@20
   }
 }
 
+// Deployment outputs for post-provisioning operations and integrations.
 output aksResourceId string = aks.id
 output aksNameOut string = aks.name
 output aksPrivateFqdn string = aks.properties.privateFQDN
