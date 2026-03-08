@@ -28,6 +28,7 @@ param dnsPrefix = ''
 param enableSpotPool = true
 
 // Node pool VM SKUs.
+// See README.md: "Find VM Sizes For Node Pool Parameters" before changing these values.
 param systemPoolVmSize = 'Standard_D4s_v5'
 param userPoolVmSize = 'Standard_D4s_v5'
 param spotPoolVmSize = 'Standard_D4as_v5'

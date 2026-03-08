@@ -231,6 +231,53 @@ Edit `main.prod.bicepparam`:
 
 All deployment values are overridable from the `.bicepparam` file.
 
+### Find VM Sizes For Node Pool Parameters
+
+Use Azure CLI to discover valid VM sizes in your target region before setting:
+- `systemPoolVmSize`
+- `userPoolVmSize`
+- `spotPoolVmSize`
+
+Set your region once:
+
+```bash
+LOCATION="eastus"
+```
+
+List generally available VM sizes in the region (use for `systemPoolVmSize` and `userPoolVmSize`):
+
+```bash
+az vm list-skus \
+  --location "$LOCATION" \
+  --resource-type virtualMachines \
+  --all \
+  --query "[?length(restrictions)==\`0\`].name" \
+  --output tsv | sort -u
+```
+
+List spot-capable VM sizes in the region (use for `spotPoolVmSize`):
+
+```bash
+az vm list-skus \
+  --location "$LOCATION" \
+  --resource-type virtualMachines \
+  --all \
+  --query "[?length(restrictions)==\`0\` && length(capabilities[?name=='SpotVmsSupported' && value=='True']) > \`0\`].name" \
+  --output tsv | sort -u
+```
+
+Quick validation for a specific SKU name:
+
+```bash
+SKU="Standard_D4s_v5"
+az vm list-skus \
+  --location "$LOCATION" \
+  --resource-type virtualMachines \
+  --all \
+  --query "[?name=='$SKU'].{name:name,restricted:length(restrictions)>\`0\`,spot:length(capabilities[?name=='SpotVmsSupported' && value=='True'])>\`0\`}" \
+  -o table
+```
+
 ## 3. Validate and Deploy
 
 ```bash
