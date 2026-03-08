@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Ensure required CLIs are present before doing any Azure operations.
 if ! command -v az >/dev/null 2>&1; then
   echo "Azure CLI is required. Install: https://learn.microsoft.com/cli/azure/install-azure-cli"
   exit 1
@@ -11,15 +12,18 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 1
 fi
 
+# Optional subscription argument lets callers target a non-default subscription.
 SUBSCRIPTION_ID="${1:-}"
 
 if [[ -n "$SUBSCRIPTION_ID" ]]; then
   az account set --subscription "$SUBSCRIPTION_ID"
 fi
 
+# Print the effective subscription for traceability in CI/local runs.
 CURRENT_SUBSCRIPTION="$(az account show --query id -o tsv)"
 echo "Using subscription: $CURRENT_SUBSCRIPTION"
 
+# Register required resource providers if not already registered.
 providers=(
   Microsoft.ContainerService
   Microsoft.Network
@@ -40,6 +44,7 @@ for provider in "${providers[@]}"; do
   fi
 done
 
+# Register AKS features used by this template.
 features=(
   Microsoft.ContainerService/AKS-AzureKeyVaultSecretsProvider
   Microsoft.ContainerService/EnableOIDCIssuerPreview
@@ -61,6 +66,7 @@ for feature in "${features[@]}"; do
   echo "Feature registration requested. It can take several minutes."
 done
 
+# Refresh provider metadata after feature registration requests.
 echo "Refreshing provider metadata after feature registration."
 az provider register --namespace Microsoft.ContainerService >/dev/null || true
 
