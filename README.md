@@ -17,6 +17,108 @@ This project deploys a production-focused AKS landing zone with hardened default
 - Prerequisite registration script
 - Vulnerability scan helper script
 
+## Architecture Diagram
+
+```mermaid
+flowchart LR
+  Admin[Platform Admin] --> PIP[Bastion Public IP]
+  PIP --> Bastion[Azure Bastion]
+  Bastion --> Jumpbox[Jumpbox VM]
+  Jumpbox --> AKS[Private AKS Cluster]
+
+  subgraph VNet[Virtual Network]
+    AksSubnet[aks-subnet]
+    BastionSubnet[AzureBastionSubnet]
+    JumpSubnet[jumpbox-subnet]
+  end
+
+  BastionSubnet --> Bastion
+  JumpSubnet --> Jumpbox
+  AksSubnet --> AKS
+
+  AKS --> LAW[Log Analytics Workspace]
+  AKS --> AMW[Azure Monitor Workspace]
+  Grafana[Managed Grafana] --> AMW
+
+  AKS --> ACR[Azure Container Registry]
+  AKS --> KV[Azure Key Vault]
+
+  PE_ACR[ACR Private Endpoint] --> ACR
+  PE_KV[Key Vault Private Endpoint] --> KV
+  AksSubnet --> PE_ACR
+  AksSubnet --> PE_KV
+
+  DNS_ACR[Private DNS Zone: privatelink.azurecr.io] --> PE_ACR
+  DNS_KV[Private DNS Zone: privatelink.vaultcore.azure.net] --> PE_KV
+
+  RA1[AcrPull Role Assignment] -. grants pull .-> AKS
+  RA1 -. scope .-> ACR
+  RA2[Key Vault Secrets User Role Assignment] -. grants secrets access .-> AKS
+  RA2 -. scope .-> KV
+  RA3[Monitoring Reader Role Assignment] -. grants read .-> Grafana
+  RA3 -. scope .-> AMW
+```
+
+Legend: solid arrows represent primary traffic/dependency flow. Dashed arrows represent logical relationships such as RBAC scope or private connectivity overlays.
+
+### High-Level View
+
+```mermaid
+flowchart TB
+  Admin[Platform Admin] --> Bastion[Azure Bastion + Public IP]
+  Bastion --> Jumpbox[Jumpbox VM]
+  Jumpbox --> AKS[Private AKS Cluster]
+
+  AKS --> ACR[Azure Container Registry]
+  AKS --> KV[Azure Key Vault]
+
+  AKS --> LAW[Log Analytics Workspace]
+  AKS --> AMW[Azure Monitor Workspace]
+  Grafana[Managed Grafana] --> AMW
+
+  ACR -. private endpoint + private DNS .- AKS
+  KV -. private endpoint + private DNS .- AKS
+```
+
+Legend: solid arrows represent primary traffic/dependency flow. Dashed arrows represent private connectivity overlays.
+
+## Keeping Diagrams Up To Date
+
+Use this workflow whenever `main.bicep` changes architecture resources or relationships.
+
+1. Rebuild the template to ensure the source model is valid:
+
+```bash
+az bicep build --file main.bicep
+```
+
+2. List resource declarations to identify new/removed components:
+
+```bash
+rg -n "^resource " main.bicep
+```
+
+3. Check connectivity and dependency lines you should reflect in Mermaid:
+
+```bash
+rg -n "privateEndpoints|privateDnsZones|roleAssignments|managedClusters|grafana|registries|vaults|workspaces|accounts|bastionHosts|virtualNetworks|virtualMachines" main.bicep
+```
+
+4. Update both Mermaid blocks in this README:
+- Detailed block under `## Architecture Diagram`
+- Simplified block under `### High-Level View`
+
+5. Keep visual consistency:
+- Solid arrows for primary traffic/dependency flow
+- Dashed arrows for overlays/indirect relationships (RBAC, private DNS/private endpoint overlays)
+
+6. Validate Mermaid rendering in Markdown preview before committing.
+
+Recommended review checklist:
+- Every `resource` in `main.bicep` appears in at least one diagram (or is intentionally omitted from the high-level view).
+- New private endpoints, DNS zones, and role assignments are represented.
+- Node labels still match current service names and intent.
+
 ## Project Files
 
 - `main.bicep`: Main deployment template
