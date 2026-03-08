@@ -135,6 +135,26 @@ chmod +x scripts/scan.sh
 The script attempts `trivy` first, then `checkov`.
 The baseline files are applied automatically when present.
 
+### Scanner Baseline Rationale
+
+The project keeps narrowly scoped suppressions for scanner behavior that does not match this template's runtime posture.
+
+`Trivy` (`.trivyignore`)
+
+- `AZU-0013`: Trivy flags Key Vault network ACL default behavior in the compiled ARM output even though this template sets `publicNetworkAccess: 'Disabled'` and `networkAcls.defaultAction: 'Deny'`.
+
+`Checkov` (`.checkov.yaml`)
+
+- `CKV_AZURE_6`: Private AKS control plane design conflicts with rule expectation around authorized IP ranges.
+- `CKV_AZURE_50`: VM extension rule is not meaningful for this Linux jumpbox baseline.
+- `CKV_AZURE_42`: Key Vault recoverability is configured (`softDeleteRetentionInDays` and purge protection) but still flagged by parser behavior.
+- `CKV_AZURE_172`: Secrets Store CSI auto-rotation is configured via addon config, but not consistently recognized.
+- `CKV_AZURE_226`: Ephemeral OS disk settings are defined on computed agent pool objects and may not be resolved by parser.
+- `CKV_AZURE_168`: Rule throws a runtime parser error against computed `agentPoolProfiles` shape.
+- `CKV_AZURE_227`: Host encryption settings are defined on computed agent pool objects and may not be resolved by parser.
+
+These suppressions should be reviewed periodically and removed as scanner engines improve.
+
 ## 9. Teardown
 
 ```bash
