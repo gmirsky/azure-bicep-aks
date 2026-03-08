@@ -100,9 +100,6 @@ param enableGrafanaPublicAccess bool = false
 ])
 param bastionSku string = 'Premium'
 
-@description('Deploy Bastion as private-only (no public IP).')
-param enablePrivateOnlyBastion bool = true
-
 @description('Name of the monitor workspace.')
 param monitorWorkspaceName string = '${namePrefix}-amw'
 
@@ -130,7 +127,6 @@ var bastionName = '${namePrefix}-bas'
 var jumpboxNicName = '${jumpboxVmName}-nic'
 var jumpboxNsgName = '${jumpboxVmName}-nsg'
 var jumpboxOsDiskName = '${jumpboxVmName}-osdisk'
-var effectiveBastionSku = enablePrivateOnlyBastion ? 'Premium' : bastionSku
 
 var acrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 var keyVaultSecretsUserRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
@@ -197,7 +193,7 @@ resource jumpboxNsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
   }
 }
 
-resource bastionPublicIp 'Microsoft.Network/publicIPAddresses@2022-09-01' = if (!enablePrivateOnlyBastion) {
+resource bastionPublicIp 'Microsoft.Network/publicIPAddresses@2022-09-01' = {
   name: bastionPublicIpName
   location: location
   tags: tags
@@ -214,22 +210,12 @@ resource bastion 'Microsoft.Network/bastionHosts@2023-11-01' = {
   location: location
   tags: tags
   sku: {
-    name: effectiveBastionSku
+    name: bastionSku
   }
   properties: {
-    enablePrivateOnlyBastion: enablePrivateOnlyBastion
     enableTunneling: true
     enableShareableLink: false
-    ipConfigurations: enablePrivateOnlyBastion ? [
-      {
-        name: 'bastion-ip-config'
-        properties: {
-          subnet: {
-            id: '${vnet.id}/subnets/AzureBastionSubnet'
-          }
-        }
-      }
-    ] : [
+    ipConfigurations: [
       {
         name: 'bastion-ip-config'
         properties: {

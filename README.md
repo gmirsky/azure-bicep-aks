@@ -150,5 +150,5 @@ az group delete --name <rg-name> --yes --no-wait
 - ACR admin user disabled
 - Private endpoints are available for ACR/Key Vault
 - Private DNS zones, VNet links, and private endpoint zone groups are configured for ACR and Key Vault
-- Bastion defaults to private-only mode (no public ingress)
+- Bastion is deployed with a Standard public IP for admin connectivity
 - OIDC issuer and workload identity profile are enabled for modern pod identity patterns

@@ -40,7 +40,6 @@ param enableDefender = true
 param enableManagedPrometheus = true
 param enableGrafanaPublicAccess = false
 param bastionSku = 'Premium'
-param enablePrivateOnlyBastion = true
 
 param monitorWorkspaceName = 'corpaks-amw'
 param logAnalyticsWorkspaceName = 'corpaks-law'
