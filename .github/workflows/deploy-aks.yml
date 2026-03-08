@@ -1,0 +1,67 @@
+name: Deploy AKS (Bicep)
+
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: Target Azure resource group name
+        required: true
+        type: string
+      location:
+        description: Azure region for resource group creation
+        required: true
+        default: eastus2
+        type: string
+      parameters_file:
+        description: Path to bicepparam file in repository
+        required: true
+        default: main.prod.bicepparam
+        type: string
+      deployment_name:
+        description: ARM deployment name
+        required: true
+        default: aks-bicep-deploy
+        type: string
+      subscription_id:
+        description: Optional subscription ID override
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Select subscription (optional)
+        if: ${{ inputs.subscription_id != '' }}
+        run: az account set --subscription "${{ inputs.subscription_id }}"
+
+      - name: Ensure Bicep CLI is available
+        run: az bicep install
+
+      - name: Create resource group if needed
+        run: |
+          set -euo pipefail
+          az group create \
+            --name "${{ inputs.resource_group }}" \
+            --location "${{ inputs.location }}"
+
+      - name: Deploy main.bicep
+        run: |
+          set -euo pipefail
+          az deployment group create \
+            --name "${{ inputs.deployment_name }}" \
+            --resource-group "${{ inputs.resource_group }}" \
+            --template-file main.bicep \
+            --parameters "${{ inputs.parameters_file }}"

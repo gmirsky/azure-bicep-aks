@@ -139,6 +139,79 @@ Recommended review checklist:
    - `Install-Module PSRule -Scope CurrentUser`
    - `Install-Module PSRule.Rules.Azure -Scope CurrentUser`
 
+## GitHub Actions Azure Credentials
+
+The deployment and teardown workflows use `azure/login@v2` with a repository secret named `AZURE_CREDENTIALS`.
+
+1. Define variables:
+
+```bash
+SUBSCRIPTION_ID="<subscription-id>"
+RESOURCE_GROUP="<rg-name>"
+SP_NAME="gh-aks-bicep-deployer"
+```
+
+2. Create a service principal JSON scoped to the target resource group:
+
+```bash
+az ad sp create-for-rbac \
+  --name "$SP_NAME" \
+  --role Contributor \
+  --scopes "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP" \
+  --sdk-auth > azure-credentials.json
+```
+
+If you want the workflow to create/delete multiple resource groups in the subscription, scope at subscription level instead:
+
+```bash
+az ad sp create-for-rbac \
+  --name "$SP_NAME" \
+  --role Contributor \
+  --scopes "/subscriptions/$SUBSCRIPTION_ID" \
+  --sdk-auth > azure-credentials.json
+```
+
+3. Authenticate GitHub CLI and set repo secret:
+
+```bash
+gh auth login
+gh secret set AZURE_CREDENTIALS --repo gmirsky/azure-bicep-aks < azure-credentials.json
+```
+
+4. (Recommended) remove local credential file after secret upload:
+
+```bash
+rm -f azure-credentials.json
+```
+
+### azure/login@v2 Troubleshooting
+
+- `Invalid client secret`:
+  Recreate the service principal credentials and update `AZURE_CREDENTIALS` with the new JSON.
+- `The client '<appId>' with object id ... does not have authorization`:
+  Ensure the service principal has `Contributor` on the target scope (resource group or subscription).
+- `Subscription not found` or wrong subscription is used:
+  Confirm `subscriptionId` in `AZURE_CREDENTIALS` and/or pass `subscription_id` input in the workflow dispatch.
+- `AADSTS700016` (application not found):
+  Verify the app registration/service principal still exists in the same tenant referenced by `tenantId`.
+- `Insufficient privileges to complete the operation` during deploy/delete:
+  Confirm role assignment propagation has completed (can take a few minutes), then retry the workflow.
+
+Verification commands:
+
+```bash
+# Confirm active subscription context.
+az account show --query "{name:name,id:id,tenantId:tenantId}" -o table
+
+# Confirm the service principal can be resolved.
+APP_ID="<appId-from-azure-credentials.json>"
+az ad sp show --id "$APP_ID" --query "{appId:appId,displayName:displayName}" -o table
+
+# Confirm role assignments at target scope.
+SCOPE="/subscriptions/<subscription-id>/resourceGroups/<rg-name>"
+az role assignment list --assignee "$APP_ID" --scope "$SCOPE" -o table
+```
+
 ## 1. Register Azure Prerequisites
 
 ```bash
