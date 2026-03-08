@@ -223,6 +223,7 @@ chmod +x scripts/prereqs.sh
 
 Edit `main.prod.bicepparam`:
 
+- `kubernetesVersion` (optional; set a specific AKS release or leave empty for regional default)
 - `jumpboxSshPublicKey`
 - `keyVaultName` (must be globally unique)
 - resource names and CIDRs if needed
@@ -276,6 +277,46 @@ az vm list-skus \
   --all \
   --query "[?name=='$SKU'].{name:name,restricted:length(restrictions)>\`0\`,spot:length(capabilities[?name=='SpotVmsSupported' && value=='True'])>\`0\`}" \
   -o table
+```
+
+### Find AKS Kubernetes Releases For Your Region
+
+Use Azure CLI to list AKS Kubernetes releases available in your target region before setting `kubernetesVersion`.
+
+```bash
+LOCATION="eastus"
+```
+
+List all AKS releases returned by Azure for the region:
+
+```bash
+az aks get-versions \
+  --location "$LOCATION" \
+  --output table
+```
+
+List generally available (non-preview) AKS releases only:
+
+```bash
+az aks get-versions \
+  --location "$LOCATION" \
+  --query "orchestrators[?isPreview!=\`true\`].orchestratorVersion" \
+  --output tsv | sort -V -u
+```
+
+List preview AKS releases in the region:
+
+```bash
+az aks get-versions \
+  --location "$LOCATION" \
+  --query "orchestrators[?isPreview==\`true\`].orchestratorVersion" \
+  --output tsv | sort -V -u
+```
+
+After choosing a version, set it in `main.prod.bicepparam`, for example:
+
+```bicep
+param kubernetesVersion = '1.30.9'
 ```
 
 ## 3. Validate and Deploy

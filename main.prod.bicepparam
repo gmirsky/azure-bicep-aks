@@ -9,6 +9,7 @@ param tags = {
   Owner: 'CloudPlatformTeam'
 }
 
+// AKS Kubernetes release. Keep empty to use the regional default, or set a specific version (for example, '1.30.9').
 param kubernetesVersion = ''
 param adminUsername = 'azureuser'
 param jumpboxSshPublicKey = 'ssh-rsa REPLACE_WITH_YOUR_PUBLIC_KEY'
