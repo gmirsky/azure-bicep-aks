@@ -1,0 +1,24 @@
+# PSRule for Azure configuration
+# Requires module: PSRule.Rules.Azure
+
+configuration:
+  AZURE_BICEP_FILE_EXPANSION: true
+
+input:
+  pathIgnore:
+    - '**/.git/**'
+    - '**/.vscode/**'
+
+rule:
+  include:
+    - Azure.AKS.Version
+    - Azure.AKS.DefenderProfile
+    - Azure.AKS.PrivateCluster
+    - Azure.ACR.AdminUser
+    - Azure.KeyVault.PurgeProtect
+    - Azure.KeyVault.SoftDelete
+
+output:
+  culture:
+    - en-US
+  outcome: All

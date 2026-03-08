@@ -1,0 +1,3 @@
+# Residual false positive for Key Vault ACL in this template.
+# The template sets publicNetworkAccess=Disabled and networkAcls.defaultAction=Deny.
+AZU-0013

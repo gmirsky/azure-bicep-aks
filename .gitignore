@@ -1,0 +1,23 @@
+# OS/editor
+.DS_Store
+.vscode/
+
+# Bicep/ARM build outputs
+*.json
+!azuredeploy.parameters.json
+
+# Deployment artifacts
+*.log
+*.state
+*.tfstate
+*.tfstate.backup
+
+# Secrets and env files
+.env
+*.pem
+*.key
+*.pfx
+
+# PSRule output
+out/
+reports/

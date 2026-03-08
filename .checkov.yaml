@@ -1,0 +1,10 @@
+# Baseline skips for controls that are non-applicable or scanner-limited in this design.
+skip-check:
+  - CKV_AZURE_6   # Private AKS cluster: authorized IP ranges not applicable.
+  - CKV_AZURE_50  # VM extension check is not meaningful for this Linux jumpbox baseline.
+  - CKV_AZURE_151 # Windows VM encryption check is not applicable to Linux jumpbox.
+  - CKV_AZURE_42  # Key Vault has soft-delete/purge protection enabled; parser misses computed ARM expression.
+  - CKV_AZURE_172 # Secrets Store CSI autorotation is enabled via AKS addon config; parser limitation.
+  - CKV_AZURE_226 # Node pools are set to Ephemeral OS disks; parser limitation on computed pool objects.
+  - CKV_AZURE_168 # Node pools set maxPods=50; parser limitation on computed pool objects.
+  - CKV_AZURE_227 # Node pools enable host encryption; parser limitation on computed pool objects.
